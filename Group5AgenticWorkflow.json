@@ -1,0 +1,261 @@
+{
+  "name": "Group5AgenticWorkflow",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "# Role and Goal\nYou are a single-action, non-conversational Content Moderation Agent for a structured form submission. Your sole purpose is to moderate the post and then log it if safe. The input is GUARANTEED to be structured and complete.\n\n# Task\nYour task is to analyze the complete post, determine its classification, and execute the final action by calling the required tools.\n\n# Data Acquisition\n- The Post Title is: {{$json.post_title}}\n- The Post Description is: {{$json.post_description}}\n\n# Moderation & Logging Process\n1.  You MUST call the **Google Perspective** tool (named 'Google Perspective') to analyze the content of the Post Description.\n    **CRITICAL MAPPING:** When calling the 'Google Perspective' tool, you MUST use the value of {{$json.post_description}} as the text to analyze.\n\n2.  **FINAL CLASSIFICATION:** Based on the scores from the Perspective tool, determine the classification:\n\n    -   **HARMFUL:** If Toxicity Score > 0.8 OR Threat Score > 0.05.\n        * (DO NOT use the logging tool.)\n        * Final Classification: \"REMOVE\".\n    -   **BORDERLINE (Toxicity between 0.5 and 0.8):**\n        * (DO NOT use the logging tool.)\n        * Final Classification: \"FLAG\".\n    -   **SAFE (Otherwise):**\n        * **Logging:** You MUST call the **Insert row in Data table** tool (named 'Insert row in Data table').\n          **CRITICAL MAPPING:** When calling the 'Insert row in Data table' tool, you MUST use the value of {{$json.post_title}} and {{$json.post_description}} as the inputs.\n        * Final Classification: \"ALLOW\".\n\n# Final Response\nAfter ALL moderation and logging steps are complete, you MUST output the Final Classification word (REMOVE, FLAG, or ALLOW).\n\nSend these JSONs to the data sheet if the classification is allow.\n\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "5d3af7ca-1eb5-4674-a6fe-c74476a11242",
+      "name": "AI Agent",
+      "notesInFlow": false,
+      "retryOnFail": false,
+      "executeOnce": false,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        208
+      ],
+      "id": "c26f1db9-08e1-4137-bc01-3a63e7befe4b",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "dVohlIFxAdJJThcA",
+          "name": "Google Gemini(PaLM) Api AdamA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "={{ $json['Post Title'] }} {{ $json['Post Description'] }}",
+        "requestedAttributesUi": {
+          "requestedAttributesValues": [
+            {
+              "attributeName": "identity_attack"
+            },
+            {
+              "attributeName": "insult"
+            },
+            {
+              "attributeName": "profanity"
+            },
+            {
+              "attributeName": "severe_toxicity"
+            },
+            {
+              "attributeName": "threat"
+            },
+            {
+              "attributeName": "sexually_explicit"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googlePerspectiveTool",
+      "typeVersion": 1,
+      "position": [
+        304,
+        208
+      ],
+      "id": "4a56d63d-9c8e-4c72-b940-f3ebe408a918",
+      "name": "Google Perspective",
+      "credentials": {
+        "googlePerspectiveOAuth2Api": {
+          "id": "iWMQU4wG0srvvCT5",
+          "name": "Google Perspective account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "QDDG28Z5rSd8pACu",
+          "mode": "list",
+          "cachedResultName": "Posts",
+          "cachedResultUrl": "/projects/3s0ImvCFG8C6AleU/datatables/QDDG28Z5rSd8pACu"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Title": "={{ $json['Post Title'] }}",
+            "Description": "={{ $json['Post Description'] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTableTool",
+      "typeVersion": 1,
+      "position": [
+        144,
+        240
+      ],
+      "id": "c9c7d15c-3e4d-4290-b72f-642e31125f5e",
+      "name": "Insert row in Data table"
+    },
+    {
+      "parameters": {
+        "formTitle": "Post",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Post Title",
+              "placeholder": "\"My Paris Trip\""
+            },
+            {
+              "fieldLabel": "Post Description",
+              "placeholder": "\"Baguettes are so fire\""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        -512,
+        0
+      ],
+      "id": "f112cfa5-d342-44e1-b0f8-cb8de0610f74",
+      "name": "On form submission",
+      "webhookId": "39aa2922-706e-4673-978d-4b681a18eeba"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6b6fede7-386f-4735-9be2-3b9f717ca2a6",
+              "name": "Post Title",
+              "value": "={{ $json['Post Title'] }}",
+              "type": "string"
+            },
+            {
+              "id": "97754fa8-5352-446b-9b9f-e1ebb56979bc",
+              "name": "Post Description",
+              "value": "={{ $json['Post Description'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -304,
+        0
+      ],
+      "id": "5e2f2c73-55b8-44b5-9315-3a91794186fb",
+      "name": "Edit Fields"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Perspective": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert row in Data table": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "82b02c32-1993-4af4-a0cb-ba6cadaa13e8",
+  "meta": {
+    "instanceId": "6115484c5ea03bab0f32f7f21e7a661b9b02d74a1069a3360fb260097073b91b"
+  },
+  "id": "vMA6Iib9p1PA3qAs",
+  "tags": []
+}
