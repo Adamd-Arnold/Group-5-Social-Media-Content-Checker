@@ -1,20 +1,75 @@
 {
-  "name": "Group5AgenticWorkflow",
   "nodes": [
     {
       "parameters": {
+        "formTitle": "Post",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Post Title",
+              "placeholder": "\"My Paris Trip\""
+            },
+            {
+              "fieldLabel": "Post Description",
+              "placeholder": "\"Baguettes are so fire\""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        -1040,
+        736
+      ],
+      "id": "9488360c-2443-4075-a297-78cd0146cc94",
+      "name": "On form submission",
+      "webhookId": "39aa2922-706e-4673-978d-4b681a18eeba"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6b6fede7-386f-4735-9be2-3b9f717ca2a6",
+              "name": "Post Title",
+              "value": "={{ $json['Post Title'] }}",
+              "type": "string"
+            },
+            {
+              "id": "97754fa8-5352-446b-9b9f-e1ebb56979bc",
+              "name": "Post Description",
+              "value": "={{ $json['Post Description'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -736,
+        736
+      ],
+      "id": "c4c2df84-39d8-435a-9924-936bde7b66ec",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
         "promptType": "define",
-        "text": "# Role and Goal\nYou are a single-action, non-conversational Content Moderation Agent for a structured form submission. Your sole purpose is to moderate the post and then log it if safe. The input is GUARANTEED to be structured and complete.\n\n# Task\nYour task is to analyze the complete post, determine its classification, and execute the final action by calling the required tools.\n\n# Data Acquisition\n- The Post Title is: {{$json.post_title}}\n- The Post Description is: {{$json.post_description}}\n\n# Moderation & Logging Process\n1.  You MUST call the **Google Perspective** tool (named 'Google Perspective') to analyze the content of the Post Description.\n    **CRITICAL MAPPING:** When calling the 'Google Perspective' tool, you MUST use the value of {{$json.post_description}} as the text to analyze.\n\n2.  **FINAL CLASSIFICATION:** Based on the scores from the Perspective tool, determine the classification:\n\n    -   **HARMFUL:** If Toxicity Score > 0.8 OR Threat Score > 0.05.\n        * (DO NOT use the logging tool.)\n        * Final Classification: \"REMOVE\".\n    -   **BORDERLINE (Toxicity between 0.5 and 0.8):**\n        * (DO NOT use the logging tool.)\n        * Final Classification: \"FLAG\".\n    -   **SAFE (Otherwise):**\n        * **Logging:** You MUST call the **Insert row in Data table** tool (named 'Insert row in Data table').\n          **CRITICAL MAPPING:** When calling the 'Insert row in Data table' tool, you MUST use the value of {{$json.post_title}} and {{$json.post_description}} as the inputs.\n        * Final Classification: \"ALLOW\".\n\n# Final Response\nAfter ALL moderation and logging steps are complete, you MUST output the Final Classification word (REMOVE, FLAG, or ALLOW).\n\nSend these JSONs to the data sheet if the classification is allow.\n\n",
+        "text": "=# Role and Goal\nYou are a single-action, non-conversational Content Moderation Agent for a structured post submission. Your sole purpose is to moderate the post, determine its final status, and pass the result to a downstream process. The input is GUARANTEED to be structured and complete, sourced from the immediate previous node.\n\n# Task\nYour task is to analyze the complete post, determine the moderation outcome (SAFE or UNSAFE), and prepare the final JSON output for the subsequent Switch node.\n\n# Data Acquisition\nThe agent will pull data using a simple cascading expression chain on the immediate input ($json):\n- The **Post Title** is: {{ $json['Post Title'] }}\n- The **Post Description** is: {{ $json.postDescription || $json['Post Description'] }}\n\n# Moderation Process\n1.  You MUST call the **Google Perspective** tool (named 'Google Perspective') to analyze the content of the Post Description. **CRITICAL MAPPING:** When calling the 'Google Perspective' tool, you MUST use the value of {{ $json.postDescription || $json['Post Title'] }} as the text to analyze.\n2.  **CRITICAL TEST:** If the text {{ $json['Post Description'] || $json['Post Title'] }} contains the word \"Unicorn\" (case-insensitive), the outcome MUST be UNSAFE.\n3.  **OUTCOME DETERMINATION:** Based on the scores from the Perspective tool, determine the outcome:\n    -   **UNSAFE (Moderation Fails):** If Toxicity Score > 0.5 OR Threat Score > 0.05. *Final Status:* **FALSE**.\n    -   **SAFE (Moderation Passes):** Otherwise. *Final Status:* **TRUE**.\n\n# Final Response\nAfter ALL moderation steps are complete, you MUST output a single JSON object (with no other surrounding text) containing the original post data, the moderation result, and a status description.\n\n# Output Format Constraint\nThe final output of this agent MUST be a valid JSON object, and ONLY a JSON object.\n\nExample SAFE Output (Final Status = TRUE):\n{\n  \"post_title\": \"{{ $json['Post Title'] }}\",\n  \"post_description\": \"{{ $json.postDescription || $json['Post Description'] }}\",\n  \"is_safe\": true,\n  \"perspective_status\": \"SAFE\"\n}\n\nExample UNSAFE Output (Final Status = FALSE):\n{\n  \"post_title\": \"{{ $json['Post Title'] }}\",\n  \"post_description\": \"{{ $json.postDescription || $json['Post Description'] }}\",\n  \"is_safe\": false,\n  \"perspective_status\": \"UNSAFE\"\n}",
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2.2,
       "position": [
-        0,
-        0
+        -512,
+        816
       ],
-      "id": "5d3af7ca-1eb5-4674-a6fe-c74476a11242",
-      "name": "AI Agent",
+      "id": "a31cc8b7-9736-4491-a883-22e9e0aae1d9",
+      "name": "AI Agent1",
       "notesInFlow": false,
       "retryOnFail": false,
       "executeOnce": false,
@@ -27,11 +82,11 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
       "position": [
-        -160,
-        208
+        -720,
+        1088
       ],
-      "id": "c26f1db9-08e1-4137-bc01-3a63e7befe4b",
-      "name": "Google Gemini Chat Model",
+      "id": "1c4bca37-2f00-419d-93c1-ef1f7cb009c1",
+      "name": "Google Gemini Chat Model1",
       "credentials": {
         "googlePalmApi": {
           "id": "dVohlIFxAdJJThcA",
@@ -69,11 +124,11 @@
       "type": "n8n-nodes-base.googlePerspectiveTool",
       "typeVersion": 1,
       "position": [
-        304,
-        208
+        -224,
+        1072
       ],
-      "id": "4a56d63d-9c8e-4c72-b940-f3ebe408a918",
-      "name": "Google Perspective",
+      "id": "93fa118b-8c24-4bfb-8cac-19732511ca93",
+      "name": "Google Perspective1",
       "credentials": {
         "googlePerspectiveOAuth2Api": {
           "id": "iWMQU4wG0srvvCT5",
@@ -83,18 +138,161 @@
     },
     {
       "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n## No storage\nStorage was not necessary to its performance.",
+        "height": 432,
+        "width": 224,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -560,
+        1008
+      ],
+      "typeVersion": 1,
+      "id": "5c92ca7b-d459-4cde-9764-24d728f16919",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n## Simple Data Table\nDependency Inversion Principle, the Agent does the heavy lifting, all this table does it receive the structured data the Agent sends to it.",
+        "height": 800,
+        "width": 368,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        336,
+        640
+      ],
+      "typeVersion": 1,
+      "id": "4b68f5ea-ecc4-485e-8abd-4cf4da4cfc6f",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Edit Field\nThis makes the data clear, and limits the scope of the model.",
+        "height": 368,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -800,
+        640
+      ],
+      "typeVersion": 1,
+      "id": "642ab390-23d5-407b-8904-9aaac4e7688f",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n## External Censoring\nOpen / Closed principle, instead of adding another filter and storing tons and tons of blacklisted words/ phrases to be constantly updated, we outsourced to Google Perspective to simplify the process to one node.",
+        "height": 432,
+        "width": 416,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -336,
+        1008
+      ],
+      "typeVersion": 1,
+      "id": "307ae2f6-6007-4a8d-be17-37e6d71ba0f5",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
         "dataTableId": {
           "__rl": true,
-          "value": "QDDG28Z5rSd8pACu",
+          "value": "Rx2e4oOoWrIrZvEB",
           "mode": "list",
-          "cachedResultName": "Posts",
-          "cachedResultUrl": "/projects/3s0ImvCFG8C6AleU/datatables/QDDG28Z5rSd8pACu"
+          "cachedResultName": "Quarantine",
+          "cachedResultUrl": "/projects/JKEdCSGmX8vs10n9/datatables/Rx2e4oOoWrIrZvEB"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "createdAt",
+              "condition": "isEmpty"
+            }
+          ]
         },
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "Title": "={{ $json['Post Title'] }}",
-            "Description": "={{ $json['Post Description'] }}"
+            "Title": "={{ $json.post_title || $if( $('Edit Fields').isExecuted, $('Edit Fields').item.json['Post Title'], '' ) || $('Edit Fields1').item.json['Post Title'] }}",
+            "Description": "={{ $json.post_description || $if( $('Edit Fields').isExecuted, $('Edit Fields').item.json['Post Description'], '' ) || $('Edit Fields1').item.json['Post Description'] }}",
+            "Status": "Quarantined"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        448,
+        704
+      ],
+      "id": "d79211d0-0af1-4e5a-b4c2-8b55f13b59c2",
+      "name": "Quarantine Post"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "4eLVpyOxDbkM8w2M",
+          "mode": "list",
+          "cachedResultName": "Posts",
+          "cachedResultUrl": "/projects/JKEdCSGmX8vs10n9/datatables/4eLVpyOxDbkM8w2M"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "createdAt",
+              "condition": "isEmpty"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Title": "={{ $json.post_title || $if( $('Edit Fields').isExecuted, $('Edit Fields').item.json['Post Title'], '' ) || $('Edit Fields1').item.json['Post Title'] }}",
+            "Description": "={{ $json.post_description || $if( $('Edit Fields').isExecuted, $('Edit Fields').item.json['Post Description'], '' ) || $('Edit Fields1').item.json['Post Description'] }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -121,59 +319,175 @@
           ],
           "attemptToConvertTypes": false,
           "convertFieldsToString": false
-        },
-        "options": {}
+        }
       },
-      "type": "n8n-nodes-base.dataTableTool",
+      "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1,
       "position": [
-        144,
-        240
+        448,
+        912
       ],
-      "id": "c9c7d15c-3e4d-4290-b72f-642e31125f5e",
-      "name": "Insert row in Data table"
+      "id": "b859580a-5f3a-4848-986f-7bdf9f96fce5",
+      "name": "Upload Post"
     },
     {
       "parameters": {
-        "formTitle": "Post",
-        "formFields": {
-          "values": [
+        "httpMethod": "POST",
+        "path": "16ec0d3e-5b85-4817-98f0-134a61cc3724",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1040,
+        944
+      ],
+      "id": "0e7f88ef-8a96-41cd-a77b-a9a1e19ced28",
+      "name": "Webhook",
+      "webhookId": "16ec0d3e-5b85-4817-98f0-134a61cc3724"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n## Gemini\nAdds more thinking power, but Agent only accepts certain outputs to prevent hallucinations.",
+        "height": 432,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -800,
+        1008
+      ],
+      "typeVersion": 1,
+      "id": "cf24308f-81d2-48ee-a8c8-bf87a4c746c6",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n## Webhook Trigger\nResponds to HTTP request from Social Media Clip Generator workflow, checks the title of the post.",
+        "height": 560,
+        "width": 688,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1488,
+        880
+      ],
+      "typeVersion": 1,
+      "id": "8a2c4fa7-5332-48cf-bbac-d1d8210da703",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "\n## On Form Submission\n\nSimulates creating a post\n\n\n",
+        "height": 240,
+        "width": 688,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1488,
+        640
+      ],
+      "typeVersion": 1,
+      "id": "66e4178e-aace-46a9-8d5f-987dae99a235",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "## AI Agent\nHas very specific instructions, simply reads the title, uses the tools, and sends back a SAFE or UNSAFE flag.",
+        "height": 368,
+        "width": 368,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -560,
+        640
+      ],
+      "typeVersion": 1,
+      "id": "7bf3c55a-2780-4065-b7cd-29ac2bf8f8f5",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
             {
-              "fieldLabel": "Post Title",
-              "placeholder": "\"My Paris Trip\""
-            },
-            {
-              "fieldLabel": "Post Description",
-              "placeholder": "\"Baguettes are so fire\""
+              "id": "63713cad-aa4d-4570-9a71-cc92e778d79d",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "UNSAFE",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
             }
-          ]
+          ],
+          "combinator": "and"
         },
         "options": {}
       },
-      "type": "n8n-nodes-base.formTrigger",
-      "typeVersion": 2.3,
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
       "position": [
-        -512,
-        0
+        -112,
+        816
       ],
-      "id": "f112cfa5-d342-44e1-b0f8-cb8de0610f74",
-      "name": "On form submission",
-      "webhookId": "39aa2922-706e-4673-978d-4b681a18eeba"
+      "id": "96694305-1e1a-494b-9bae-06f74c171340",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "content": "## IF Safe / Unsafe\n\nChecks if the agent sent back SAFE or UNSAFE, then posts it or quarantines it for human moderation.",
+        "height": 368,
+        "width": 528,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -192,
+        640
+      ],
+      "typeVersion": 1,
+      "id": "f21252fd-4e02-42a9-902d-d32c2987b467",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "content": "",
+        "height": 432,
+        "width": 256,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        80,
+        1008
+      ],
+      "typeVersion": 1,
+      "id": "28bb44a9-d258-4db6-88ad-7f711e956b57",
+      "name": "Sticky Note9"
     },
     {
       "parameters": {
         "assignments": {
           "assignments": [
             {
-              "id": "6b6fede7-386f-4735-9be2-3b9f717ca2a6",
+              "id": "87c312dd-2469-4f77-a669-4adc7b0c427b",
               "name": "Post Title",
-              "value": "={{ $json['Post Title'] }}",
+              "value": "={{ $json.body.videoTitle }}",
               "type": "string"
             },
             {
-              "id": "97754fa8-5352-446b-9b9f-e1ebb56979bc",
-              "name": "Post Description",
-              "value": "={{ $json['Post Description'] }}",
+              "id": "95a813a9-afac-4f99-a5dc-3b68f5897ed5",
+              "name": "=Post Description",
+              "value": "={{ $json.body.postDescr }}",
               "type": "string"
             }
           ]
@@ -183,48 +497,14 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -304,
-        0
+        -736,
+        880
       ],
-      "id": "5e2f2c73-55b8-44b5-9315-3a91794186fb",
-      "name": "Edit Fields"
+      "id": "805eaf5c-97a1-48e2-a5d0-c474122d2750",
+      "name": "Edit Fields1"
     }
   ],
-  "pinData": {},
   "connections": {
-    "Google Gemini Chat Model": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Google Perspective": {
-      "ai_tool": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Insert row in Data table": {
-      "ai_tool": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "On form submission": {
       "main": [
         [
@@ -240,7 +520,80 @@
       "main": [
         [
           {
-            "node": "AI Agent",
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Perspective1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Quarantine Post",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Upload Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
             "type": "main",
             "index": 0
           }
@@ -248,14 +601,9 @@
       ]
     }
   },
-  "active": false,
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "versionId": "82b02c32-1993-4af4-a0cb-ba6cadaa13e8",
+  "pinData": {},
   "meta": {
+    "templateCredsSetupCompleted": true,
     "instanceId": "6115484c5ea03bab0f32f7f21e7a661b9b02d74a1069a3360fb260097073b91b"
-  },
-  "id": "vMA6Iib9p1PA3qAs",
-  "tags": []
+  }
 }
